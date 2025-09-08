@@ -1,12 +1,12 @@
 import express from "express";
-import client from "./config/db.js";
+import userRoutes from './routes/userRoutes.js'
 const port=5000;
 
 const app = express();
 
-app.get('/',(req,res)=>{
-    res.send("Connection Eastablished")
-})
+app.use(express.json());
+
+app.use("/api/users",userRoutes);
 
 app.listen(port,()=>{
     console.log("App is listining at " + port);
