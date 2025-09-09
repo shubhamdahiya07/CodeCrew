@@ -1,5 +1,6 @@
 import bcrypt from "bcrypt";
-import {findUserByEmail,createUser,checkLoginDetails} from "../models/userModel.js";
+import jwt from 'jsonwebtoken';
+import {findUserByEmail,createUser,checkLoginDetails,getProfileDetails,sendConnectionRequest} from "../models/userModel.js";
 const saltRounds = parseInt(process.env.BCRYPT_SALT_ROUNDS, 10)
 
 export const signup =  async(req,res) => {
@@ -40,7 +41,12 @@ export const login = async(req,res) =>{
         const isValidUser = await bcrypt.compare(password, hashedPassword); 
         
         if(isValidUser){
-            res.status(200).json({message:"Login Successfull"});
+            const token = jwt.sign(
+                {id: loginCheck.rows[0].id,email:loginCheck.rows[0].email}, //Details with which is should be signed
+                process.env.JWT_SECRET, //your jwt secret
+                {expiresIn:process.env.JWT_EXPIRES_IN} //expiration time of token
+            );
+            res.status(200).json({message:"Login Successful",token});
         }
         else{
             res.status(401).json({message:"Please check email and password"});
@@ -48,5 +54,30 @@ export const login = async(req,res) =>{
     } catch (error) {
         console.log("Error while logging in ",error);
         res.status(500).json({ error: "Internal Server Error" })
+    }
+}
+
+export const profile = async(req,res)=>{
+    try {
+        const profileDetails = await getProfileDetails(req.user.id);
+        console.log(req.user, "profileDetails");
+        res.status(200).json(profileDetails.rows[0]);
+    } catch (error) {
+        console.log("Error while fetching profile ",error);
+        res.status(500).json({ error: "Internal Server Error" })
+    }
+}
+
+export const sendRequest = async(req,res)=>{
+    try {
+        const fromUserId = req.user.id;
+        const toUserId = req.body.id;
+
+        await sendConnectionRequest(fromUserId,toUserId);
+
+        res.status(200).json({message:"Request Sent successfully"});
+    } catch (error) {
+        console.log("Error while sending request",error);
+        res.status(400).json({error:"Internal Server Error"});
     }
 }
